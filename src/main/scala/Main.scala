@@ -1,10 +1,18 @@
 import java.net.URI
 
-import sinotify.Listener
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.util.ToolRunner
+import sinotify.{Launcher, Listener}
 
-object Main extends App {
+object Main {
 
-  override def main(args: Array[String]): Unit = {
-    Listener.run(new URI("hdfs://localhost:8020"))
+  def main(args: Array[String]): Unit = {
+    val hadoopConf = new Configuration()
+
+    val runner = ToolRunner.run(hadoopConf, Launcher, args)
   }
+
+
 }
+
+
