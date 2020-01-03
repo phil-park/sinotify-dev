@@ -10,8 +10,7 @@ import utils.DateUtils
 
 object Listener {
 
-  def run(host: URI): Unit = {
-    val conf = new Configuration()
+  def run(host: URI, conf: Configuration): Unit = {
     val hdfsAdmin = new HdfsAdmin(host, conf)
     val eventStream = hdfsAdmin.getInotifyEventStream(0);
 
