@@ -3,10 +3,12 @@ package sinotify
 import java.io.Closeable
 import java.net.URI
 
+import org.apache.curator.framework.CuratorFrameworkFactory
+import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.util.Tool
 
-object Launcher extends Tool with Closeable {
+object Launcher extends Tool {
   private var conf: Configuration = _
 
   override def getConf: Configuration = this.conf
@@ -16,21 +18,38 @@ object Launcher extends Tool with Closeable {
   }
 
   override def run(args: Array[String]): Int = {
+    println("Launcher started")
     val options = parseArgs(args.toList)
 
-    try {
-      val uri = new URI("hdfs://localhost:8020")
-      // check listener need implement multithreading
-      Listener.run(uri, this.conf)
-      0
-    }
-    catch {
-      case err: Throwable =>
-        1
-    }
+    val zk_connect = options.get('zk_connect).toString
+    println("start connect " + zk_connect)
+    val builder = CuratorFrameworkFactory.builder()
+      .connectString(zk_connect)
+      .retryPolicy(new ExponentialBackoffRetry(1000, 3))
+      .build()
+
+    builder.start()
+
+    val uri = new URI("hdfs://localhost:8020")
+
+    // check listener need implement multithreading
+    val listener = Listener
+
+    sys.addShutdownHook(
+      try {
+        Listener.close()
+      } catch {
+        case err: Throwable =>
+          1
+      }
+    )
+
+    Listener.run(uri, this.conf)
+    0
   }
 
   def parseArgs(args: List[String]) = {
+    println("parseArgs")
     type OptionMap = Map[Symbol, Any]
 
     def next(map: OptionMap, list: List[String]): OptionMap = {
@@ -49,9 +68,5 @@ object Launcher extends Tool with Closeable {
     next(Map(), args)
   }
 
-  override def close(): Unit = {
-    /*
-    To Do
-    */
-  }
+
 }
