@@ -15,7 +15,9 @@ object Launcher extends Tool with Closeable {
     this.conf = conf
   }
 
-  override def run(args: Array[String]):Int = {
+  override def run(args: Array[String]): Int = {
+    val options = parseArgs(args.toList)
+
     try {
       val uri = new URI("hdfs://localhost:8020")
       // check listener need implement multithreading
@@ -26,6 +28,25 @@ object Launcher extends Tool with Closeable {
       case err: Throwable =>
         1
     }
+  }
+
+  def parseArgs(args: List[String]) = {
+    type OptionMap = Map[Symbol, Any]
+
+    def next(map: OptionMap, list: List[String]): OptionMap = {
+      list match {
+        case Nil => map
+        case "--zk.connect" :: value :: tail =>
+          next(map ++ Map('zk_connect -> value), tail)
+        case "--hdfs.nn" :: value :: tail =>
+          next(map ++ Map('hdfs_nn -> value), tail)
+        case option :: tail =>
+          println("Unsupported option " + option)
+          sys.exit(1)
+      }
+    }
+
+    next(Map(), args)
   }
 
   override def close(): Unit = {
