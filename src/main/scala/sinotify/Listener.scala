@@ -6,9 +6,10 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hdfs.client.HdfsAdmin
 import org.apache.hadoop.hdfs.inotify.Event
 import org.apache.hadoop.hdfs.inotify.Event.EventType
+import java.io.Closeable
 import utils.DateUtils
 
-object Listener {
+object Listener extends Closeable{
 
   def run(host: URI, conf: Configuration): Unit = {
     val hdfsAdmin = new HdfsAdmin(host, conf)
@@ -39,8 +40,6 @@ object Listener {
           println(event.getEventType)
           event match {
             case event: Event.CreateEvent =>
-              println("  path = " + event.getPath)
-              println("  owner = " + event.getOwnerName)
               println("  ctime = " + DateUtils.convertDateToString(event.getCtime))
             case event: Event.AppendEvent =>
               println("  path = " + event.getPath)
@@ -61,5 +60,9 @@ object Listener {
       }
     }
   }
-
+  override def close(): Unit = {
+    /*
+    To Do
+    */
+  }
 }
