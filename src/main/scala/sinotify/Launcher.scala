@@ -24,13 +24,17 @@ object Launcher extends Tool {
 
     val hdfsUrl = options.get('hdfsUrl) match {
       case Some(v) => v.toString
-      case None => sys.exit(1)
+      case None =>
+        println("[Error] hdfs.url")
+        sys.exit(1)
     }
     val uri = new URI(hdfsUrl)
 
     val zkConnectUrl = options.get('zkConnectUrl) match {
       case Some(v) => v.toString
-      case None => sys.exit(1)
+      case None =>
+        println("[Error] zk.connect.url")
+        sys.exit(1)
     }
 
     println("hdfsUrl : " + hdfsUrl)
@@ -97,6 +101,4 @@ object Launcher extends Tool {
 
     next(Map(), args)
   }
-
-
 }
