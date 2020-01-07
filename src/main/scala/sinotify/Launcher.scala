@@ -7,6 +7,7 @@ import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.util.Tool
+import utils.AuthUtils
 
 object Launcher extends Tool {
   private var conf: Configuration = _
@@ -21,30 +22,55 @@ object Launcher extends Tool {
     println("Launcher started")
     val options = parseArgs(args.toList)
 
-    val zk_connect = options.get('zk_connect).toString
-    println("start connect " + zk_connect)
+    val hdfsUrl = options.get('hdfsUrl) match {
+      case Some(v) => v.toString
+      case None => sys.exit(1)
+    }
+    val uri = new URI(hdfsUrl)
+
+    val zkConnectUrl = options.get('zkConnectUrl) match {
+      case Some(v) => v.toString
+      case None => sys.exit(1)
+    }
+
+    println("hdfsUrl : " + hdfsUrl)
+    println("zkConnectUrl : " + zkConnectUrl)
+
     val builder = CuratorFrameworkFactory.builder()
-      .connectString(zk_connect)
+      .connectString(zkConnectUrl)
       .retryPolicy(new ExponentialBackoffRetry(1000, 3))
       .build()
 
     builder.start()
 
-    val uri = new URI("hdfs://localhost:8020")
+    val kerberosKeytab = options.get('kerberosKeytab) match {
+      case Some(v) => v
+      case None => None
+    }
 
+    val kerberosPrincipal = options.get('kerberosPrincipal) match {
+      case Some(v) => v
+      case None => None
+    }
+
+    if (kerberosKeytab != None && kerberosPrincipal != None) {
+      println("connect Kerberos")
+      println("principal : " + kerberosPrincipal)
+      println("keytabPath : " + kerberosKeytab)
+      AuthUtils.authenticate(kerberosPrincipal.toString, kerberosKeytab.toString)
+    }
     // check listener need implement multithreading
     val listener = Listener
 
     sys.addShutdownHook(
       try {
-        Listener.close()
+        listener.close()
       } catch {
         case err: Throwable =>
           1
       }
     )
-
-    Listener.run(uri, this.conf)
+    listener.run(uri, this.conf)
     0
   }
 
@@ -55,10 +81,14 @@ object Launcher extends Tool {
     def next(map: OptionMap, list: List[String]): OptionMap = {
       list match {
         case Nil => map
-        case "--zk.connect" :: value :: tail =>
-          next(map ++ Map('zk_connect -> value), tail)
-        case "--hdfs.nn" :: value :: tail =>
-          next(map ++ Map('hdfs_nn -> value), tail)
+        case "--zk.connect.url" :: value :: tail =>
+          next(map ++ Map('zkConnectUrl -> value), tail)
+        case "--hdfs.url" :: value :: tail =>
+          next(map ++ Map('hdfsUrl -> value), tail)
+        case "--kerberos.principal" :: value :: tail =>
+          next(map ++ Map('kerberosPrincipal -> value), tail)
+        case "--kerberos.keytab" :: value :: tail =>
+          next(map ++ Map('kerberosKeytab -> value), tail)
         case option :: tail =>
           println("Unsupported option " + option)
           sys.exit(1)
