@@ -13,7 +13,7 @@ object Listener extends Closeable{
 
   def run(host: URI, conf: Configuration): Unit = {
     val hdfsAdmin = new HdfsAdmin(host, conf)
-    val eventStream = hdfsAdmin.getInotifyEventStream(0);
+    val eventStream = hdfsAdmin.getInotifyEventStream(-1);
 
     while (true) {
       eventStream.take.getEvents.map(event => {
@@ -31,15 +31,12 @@ object Listener extends Closeable{
           case _ =>
             event
         }
-      }).filter {
-        // test filter
-        case event: Event.CreateEvent => true
-        case _ => false
-      }.foreach {
+      }).foreach {
         event => {
           println(event.getEventType)
           event match {
             case event: Event.CreateEvent =>
+              println("  path = " + event.getPath)
               println("  ctime = " + DateUtils.convertDateToString(event.getCtime))
             case event: Event.AppendEvent =>
               println("  path = " + event.getPath)
