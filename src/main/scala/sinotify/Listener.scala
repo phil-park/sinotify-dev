@@ -47,7 +47,7 @@ object Listener extends Closeable {
         "event" ->
           ("type" -> event.getEventType.toString) ~
             ("path" -> event.getPath) ~
-            ("fileSize" -> DateUtils.convertDateToString(event.getFileSize)) ~
+            ("fileSize" -> event.getFileSize) ~
             ("time" -> DateUtils.convertDateToString(event.getTimestamp))
       case event: Event.UnlinkEvent =>
         "event" ->
