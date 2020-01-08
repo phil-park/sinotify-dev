@@ -1,6 +1,5 @@
 package sinotify
 
-import java.io.Closeable
 import java.net.URI
 
 import org.apache.curator.framework.CuratorFrameworkFactory
@@ -11,6 +10,7 @@ import utils.AuthUtils
 
 object Launcher extends Tool {
   private var conf: Configuration = _
+  type OptionMap = Map[Symbol, Any]
 
   override def getConf: Configuration = this.conf
 
@@ -63,6 +63,13 @@ object Launcher extends Tool {
       println("keytabPath : " + kerberosKeytab)
       AuthUtils.authenticate(kerberosPrincipal.toString, kerberosKeytab.toString)
     }
+
+    val outputPath = options.get('outputPath) match {
+      case Some(v) => v
+      case None => None
+    }
+
+
     // check listener need implement multithreading
     val listener = Listener
 
@@ -74,13 +81,13 @@ object Launcher extends Tool {
           1
       }
     )
-    listener.run(uri, this.conf)
+    listener.run(uri, this.conf, outputPath.toString)
     0
   }
 
-  def parseArgs(args: List[String]) = {
+  def parseArgs(args: List[String]): OptionMap = {
     println("parseArgs")
-    type OptionMap = Map[Symbol, Any]
+
 
     def next(map: OptionMap, list: List[String]): OptionMap = {
       list match {
@@ -93,6 +100,8 @@ object Launcher extends Tool {
           next(map ++ Map('kerberosPrincipal -> value), tail)
         case "--kerberos.keytab" :: value :: tail =>
           next(map ++ Map('kerberosKeytab -> value), tail)
+        case "--output.path" :: value :: tail =>
+          next(map ++ Map('outputPath -> value), tail)
         case option :: tail =>
           println("Unsupported option " + option)
           sys.exit(1)
