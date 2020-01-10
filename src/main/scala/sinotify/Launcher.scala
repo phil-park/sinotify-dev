@@ -2,13 +2,17 @@ package sinotify
 
 import java.net.URI
 
+import com.typesafe.scalalogging
 import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.util.Tool
+import org.slf4j.LoggerFactory
 import utils.AuthUtils
 
 object Launcher extends Tool {
+
+  val logger = scalalogging.Logger(LoggerFactory.getLogger("Launcher"))
   private var conf: Configuration = _
   type OptionMap = Map[Symbol, Any]
 
@@ -19,13 +23,13 @@ object Launcher extends Tool {
   }
 
   override def run(args: Array[String]): Int = {
-    println("Launcher started")
+    logger.error("Launcher started")
     val options = parseArgs(args.toList)
 
     val hdfsUrl = options.get('hdfsUrl) match {
       case Some(v) => v.toString
       case None =>
-        println("[Error] hdfs.url")
+        logger.error("[Error] hdfs.url")
         sys.exit(1)
     }
     val uri = new URI(hdfsUrl)
@@ -33,12 +37,12 @@ object Launcher extends Tool {
     val zkConnectUrl = options.get('zkConnectUrl) match {
       case Some(v) => v.toString
       case None =>
-        println("[Error] zk.connect.url")
+        logger.error("[Error] zk.connect.url")
         sys.exit(1)
     }
 
-    println("hdfsUrl : " + hdfsUrl)
-    println("zkConnectUrl : " + zkConnectUrl)
+    logger.info("hdfsUrl : " + hdfsUrl)
+    logger.info("zkConnectUrl : " + zkConnectUrl)
 
     val builder = CuratorFrameworkFactory.builder()
       .connectString(zkConnectUrl)
@@ -46,6 +50,7 @@ object Launcher extends Tool {
       .build()
 
     builder.start()
+
 
     val kerberosKeytab = options.get('kerberosKeytab) match {
       case Some(v) => v
@@ -58,9 +63,9 @@ object Launcher extends Tool {
     }
 
     if (kerberosKeytab != None && kerberosPrincipal != None) {
-      println("connect Kerberos")
-      println("principal : " + kerberosPrincipal)
-      println("keytabPath : " + kerberosKeytab)
+      logger.info("connect Kerberos")
+      logger.info("principal : " + kerberosPrincipal)
+      logger.info("keytabPath : " + kerberosKeytab)
       AuthUtils.authenticate(kerberosPrincipal.toString, kerberosKeytab.toString)
     }
 
@@ -86,8 +91,6 @@ object Launcher extends Tool {
   }
 
   def parseArgs(args: List[String]): OptionMap = {
-    println("parseArgs")
-
 
     def next(map: OptionMap, list: List[String]): OptionMap = {
       list match {
@@ -103,7 +106,7 @@ object Launcher extends Tool {
         case "--output.path" :: value :: tail =>
           next(map ++ Map('outputPath -> value), tail)
         case option :: tail =>
-          println("Unsupported option " + option)
+          logger.error("Unsupported option " + option)
           sys.exit(1)
       }
     }

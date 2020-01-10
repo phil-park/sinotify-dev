@@ -11,9 +11,13 @@ import org.apache.hadoop.hdfs.inotify.Event
 import org.apache.hadoop.hdfs.inotify.Event.EventType
 import java.io.Closeable
 
+import com.typesafe.scalalogging
+import org.slf4j.LoggerFactory
 import utils.DateUtils
 
 object Listener extends Closeable {
+
+  val logger = scalalogging.Logger(LoggerFactory.getLogger(classOf[Closeable]))
 
   def downcastEvent(event: Event): Event = {
     event.getEventType match {
@@ -77,20 +81,19 @@ object Listener extends Closeable {
     /*
       filtering rule for test
     */
-    !obj._2.values("path").toString.startsWith("/tmp") && !obj._2.values("path").toString.startsWith("/user")
+    !obj._2.values("path").toString.startsWith("/tmp") && !obj._2.values("path").toString.startsWith("/user") && obj._2.values("type").toString != "CREATE" && obj._2.values("type").toString != "APPEND"
   }
 
   def publish(obj: (String, JsonAST.JObject)): Unit = {
     /*
       publish method for test
     */
-    println(obj)
+    println(compact(render(obj)))
   }
 
   def run(host: URI, conf: Configuration, outFilePath: String): Unit = {
     val hdfsAdmin = new HdfsAdmin(host, conf)
     val eventStream = hdfsAdmin.getInotifyEventStream(0);
-    var counter = 0
 
     while (true) {
       eventStream.take.getEvents.map(
@@ -99,9 +102,9 @@ object Listener extends Closeable {
         toJson
       ).filter(
         filterRule
-      ).foreach(
-        publish
-      )
+      ).foreach(json => {
+        publish(json)
+      })
     }
   }
 
